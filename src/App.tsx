@@ -1,5 +1,12 @@
-export const App = () => {
+import WebcamComponent from './WebcamComponent';
+
+const App = () => {
   return (
-    <div>App</div>
-  )
-}
+    <>
+      <h1>App 123</h1>
+      {/* <WebcamComponent /> */}
+    </>
+  );
+};
+
+export default App;
