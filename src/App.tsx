@@ -1,10 +1,17 @@
-import WebcamComponent from './WebcamComponent';
+import React, { useState } from "react";
+import { LandingPage } from "./LandingPage";
+import MainApp from "./MainApp";
 
 const App = () => {
+  const [appState, setAppState] = useState<"landing" | "app">("landing");
+
   return (
     <>
-      <h1>App 123</h1>
-      {/* <WebcamComponent /> */}
+      {appState === "landing" ? (
+        <LandingPage onStart={() => setAppState("app")} />
+      ) : (
+        <MainApp onBack={() => setAppState("landing")} />
+      )}
     </>
   );
 };

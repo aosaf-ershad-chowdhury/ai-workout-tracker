@@ -1,3 +1,4 @@
+// WebcamComponent.tsx
 import React, { useRef, useEffect, useState } from "react";
 import Webcam from "react-webcam";
 import {
@@ -5,17 +6,22 @@ import {
   PoseLandmarker,
   DrawingUtils,
 } from "@mediapipe/tasks-vision";
+import type { Landmarks } from "./types";
 
-const WebcamComponent = () => {
+interface WebcamComponentProps {
+  onLandmarkUpdate: (landmarks: Landmarks | null) => void;
+}
+
+export const WebcamComponent: React.FC<WebcamComponentProps> = ({
+  onLandmarkUpdate,
+}) => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [initialized, setInitialized] = useState(false);
-  const [feedback, setFeedback] = useState<string>("");
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const lastVideoTimeRef = useRef<number>(-1);
   const animationFrameRef = useRef<number>(0);
 
-  // Initialize MediaPipe
   useEffect(() => {
     const initializePoseLandmarker = async () => {
       try {
@@ -26,7 +32,9 @@ const WebcamComponent = () => {
           vision,
           {
             baseOptions: {
-              modelAssetPath: `${import.meta.env.BASE_URL || "/"}models/pose_landmarker_heavy.task`,
+              modelAssetPath: `${
+                import.meta.env.BASE_URL || "/"
+              }models/pose_landmarker_heavy.task`,
               delegate: "GPU",
             },
             runningMode: "VIDEO",
@@ -40,69 +48,63 @@ const WebcamComponent = () => {
     };
 
     initializePoseLandmarker();
-
-    // Cleanup function
     return () => {
       cancelAnimationFrame(animationFrameRef.current);
     };
   }, []);
 
-  // Process webcam frames
   useEffect(() => {
     if (!initialized || !webcamRef.current || !canvasRef.current) return;
 
     const predictWebcam = async () => {
       const video = webcamRef.current?.video;
       const canvas = canvasRef.current;
+      if (!video || !canvas || video.readyState < 2) {
+        // Skip processing if video not ready
+        animationFrameRef.current = requestAnimationFrame(predictWebcam);
+        return;
+      }
 
-      if (!video || !canvas) return;
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn("Invalid video dimensions - skipping frame");
+        animationFrameRef.current = requestAnimationFrame(predictWebcam);
+        return;
+      }
 
-      // Set canvas dimensions to match video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-
       const canvasCtx = canvas.getContext("2d");
       if (!canvasCtx || !poseLandmarkerRef.current) return;
 
       const drawingUtils = new DrawingUtils(canvasCtx);
 
-      // Only process if video time has changed
       if (lastVideoTimeRef.current !== video.currentTime) {
         lastVideoTimeRef.current = video.currentTime;
+        try {
+          const results = poseLandmarkerRef.current.detectForVideo(
+            video,
+            performance.now()
+          );
 
-        // Detect poses
-        const results = poseLandmarkerRef.current.detectForVideo(
-          video,
-          performance.now()
-        );
+          canvasCtx.save();
+          canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Clear canvas
-        canvasCtx.save();
-        canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+          if (results.landmarks && results.landmarks.length > 0) {
+            for (const landmarks of results.landmarks) {
+              // drawingUtils.drawLandmarks(landmarks);
+              // drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS);
 
-        // Draw pose landmarks
-        if (results.landmarks) {
-          for (const landmarks of results.landmarks) {
-            // drawingUtils.drawLandmarks(landmarks, {
-            //   radius: (data) =>
-            //     data.from && typeof data.from.z === "number"
-            //       ? DrawingUtils.lerp(data.from.z, -0.15, 0.1, 5, 1)
-            //       : 5,
-            // });
-            // drawingUtils.drawConnectors(
-            //   landmarks,
-            //   PoseLandmarker.POSE_CONNECTIONS
-            // );
-
-            // Analyze form and generate feedback
-            const formFeedback = analyzeForm(landmarks);
-            setFeedback(formFeedback);
+              onLandmarkUpdate(landmarks as Landmarks);
+            }
+          } else {
+            onLandmarkUpdate(null);
           }
+        } catch (error) {
+          console.error("Error during pose detection:", error);
+          onLandmarkUpdate(null);
         }
         canvasCtx.restore();
       }
-
-      // Continue processing
       animationFrameRef.current = requestAnimationFrame(predictWebcam);
     };
 
@@ -111,58 +113,7 @@ const WebcamComponent = () => {
     return () => {
       cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [initialized]);
-
-  // Form analysis logic (example for squats)
-  const analyzeForm = (landmarks: any) => {
-    if (!landmarks || landmarks.length < 25) return "";
-
-    // Get key landmarks (indices from MediaPipe documentation)
-    const leftShoulder = landmarks[11];
-    const leftHip = landmarks[23];
-    const leftKnee = landmarks[25];
-    const leftAnkle = landmarks[27];
-    const rightShoulder = landmarks[12];
-    const rightHip = landmarks[24];
-    const rightKnee = landmarks[26];
-    const rightAnkle = landmarks[28];
-
-    // Calculate knee angles
-    const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
-    const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
-
-    // Calculate back angle
-    const backAngleLeft = calculateAngle(leftShoulder, leftHip, leftKnee);
-    const backAngleRight = calculateAngle(rightShoulder, rightHip, rightKnee);
-
-    // Generate feedback
-    let messages: string[] = [];
-
-    // Knee depth check
-    if (leftKneeAngle > 100 || rightKneeAngle > 100) {
-      messages.push("Go deeper! Aim for 90° knee bend");
-    }
-
-    // Back straightness check
-    if (backAngleLeft < 160 || backAngleRight < 160) {
-      messages.push("Keep your back straight!");
-    }
-
-    // Knee alignment check
-    if (Math.abs(leftKnee.x - rightKnee.x) > 0.2) {
-      messages.push("Keep knees aligned with feet");
-    }
-
-    return messages.length > 0 ? messages.join("\n") : "Good form!";
-  };
-
-  // Calculate angle between three points
-  const calculateAngle = (a: any, b: any, c: any) => {
-    const radians =
-      Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-    let angle = Math.abs((radians * 180) / Math.PI);
-    return angle > 180 ? 360 - angle : angle;
-  };
+  }, [initialized, onLandmarkUpdate]);
 
   return (
     <div
@@ -182,7 +133,6 @@ const WebcamComponent = () => {
         videoConstraints={{ facingMode: "user" }}
         style={{ display: "block", width: "100%" }}
       />
-
       <canvas
         ref={canvasRef}
         style={{
@@ -194,30 +144,6 @@ const WebcamComponent = () => {
           pointerEvents: "none",
         }}
       />
-
-      {feedback && (
-        <div
-          style={{
-            marginTop: "16px",
-            padding: "16px",
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            color: "white",
-            borderRadius: "8px",
-          }}
-        >
-          <h3
-            style={{
-              fontWeight: "bold",
-              fontSize: "18px",
-              marginBottom: "8px",
-            }}
-          >
-            Form Feedback:
-          </h3>
-          <div style={{ whiteSpace: "pre-line" }}>{feedback}</div>
-        </div>
-      )}
-
       {!initialized && (
         <div
           style={{
@@ -240,5 +166,3 @@ const WebcamComponent = () => {
     </div>
   );
 };
-
-export default WebcamComponent;
