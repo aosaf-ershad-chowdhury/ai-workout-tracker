@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import CssBaseline from "@mui/material/CssBaseline";
 import { Hero } from "./components/Hero";
 import AppBar from "./components/AppBar";

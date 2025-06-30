@@ -141,11 +141,9 @@ export const Feedback: React.FC<FeedbackProps> = ({ landmarks }) => {
   const analyzeForm = (landmarks: any, depthHistory: number[]) => {
     if (!landmarks || landmarks.length < 25) return "";
 
-    const leftShoulder = landmarks[11];
     const leftHip = landmarks[23];
     const leftKnee = landmarks[25];
     const leftAnkle = landmarks[27];
-    const rightShoulder = landmarks[12];
     const rightHip = landmarks[24];
     const rightKnee = landmarks[26];
     const rightAnkle = landmarks[28];

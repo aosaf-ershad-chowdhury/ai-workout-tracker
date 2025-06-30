@@ -4,7 +4,7 @@ import Webcam from "react-webcam";
 import {
   FilesetResolver,
   PoseLandmarker,
-  DrawingUtils,
+  // DrawingUtils,
 } from "@mediapipe/tasks-vision";
 import type { Landmarks } from "./types";
 
@@ -76,7 +76,7 @@ export const WebcamComponent: React.FC<WebcamComponentProps> = ({
       const canvasCtx = canvas.getContext("2d");
       if (!canvasCtx || !poseLandmarkerRef.current) return;
 
-      const drawingUtils = new DrawingUtils(canvasCtx);
+      // const drawingUtils = new DrawingUtils(canvasCtx);
 
       if (lastVideoTimeRef.current !== video.currentTime) {
         lastVideoTimeRef.current = video.currentTime;
