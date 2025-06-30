@@ -5,6 +5,7 @@ import Container from "@mui/material/Container";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
+import { keyframes } from "@mui/system";
 
 interface HeroProps {
   start: () => void;
@@ -27,6 +28,28 @@ const StyledBox = styled("div")(({ theme }) => ({
     }/static/screenshots/material-ui/getting-started/templates/dashboard-dark.jpg)`,
   }),
 }));
+
+// Animation keyframes
+const fadeInLeft = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(-80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+const fadeInRight = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
 
 export const Hero: React.FC<HeroProps> = ({ start }) => {
   return (
@@ -61,7 +84,13 @@ export const Hero: React.FC<HeroProps> = ({ start }) => {
           gap: { xs: 2, sm: 4 },
         }}
       >
-        <Box sx={{ flex: 1, minWidth: "600px" }}>
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: "600px",
+            animation: `${fadeInLeft} 1s cubic-bezier(0.4,0,0.2,1)`,
+          }}
+        >
           <Stack
             spacing={1}
             useFlexGap
@@ -122,6 +151,7 @@ export const Hero: React.FC<HeroProps> = ({ start }) => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
+            animation: `${fadeInRight} 1s cubic-bezier(0.4,0,0.2,1)`,
           }}
         >
           <StyledBox id="image" />

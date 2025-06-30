@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { Landmarks } from "./types";
+// import Speech from "react-speech";
 
 interface FeedbackProps {
   landmarks: Landmarks | null;
@@ -81,6 +82,8 @@ export const Feedback: React.FC<FeedbackProps> = ({ landmarks }) => {
 
   // Use ref to track previous values without triggering re-renders
   const prevLandmarks = useRef<Landmarks | null>(null);
+  // Store last spoken feedback to avoid repeating
+  const lastSpokenRef = useRef<string>("");
 
   useEffect(() => {
     if (!landmarks || landmarks.length < 29) return;
@@ -99,6 +102,19 @@ export const Feedback: React.FC<FeedbackProps> = ({ landmarks }) => {
     }
     setState(newState);
   }, [landmarks]);
+
+  useEffect(() => {
+    if (pendingFeedback && pendingFeedback !== lastSpokenRef.current) {
+      lastSpokenRef.current = pendingFeedback;
+      // Use browser speech synthesis if react-speech is not enough
+      if (window.speechSynthesis) {
+        const utter = new window.SpeechSynthesisUtterance(pendingFeedback);
+        utter.rate = 1.1;
+        window.speechSynthesis.cancel(); // Stop any previous speech
+        window.speechSynthesis.speak(utter);
+      }
+    }
+  }, [pendingFeedback]);
 
   const detectReps = (landmarks: any, currentState: FeedbackState) => {
     const leftKneeAngle = calculateAngle(
@@ -240,6 +256,8 @@ export const Feedback: React.FC<FeedbackProps> = ({ landmarks }) => {
       >
         {Math.floor(state.repCount)}
       </div>
+      {/* Optionally, you can use the react-speech component for UI speech controls: */}
+      {/* <Speech text={pendingFeedback || state.feedback} /> */}
     </>
   );
 };

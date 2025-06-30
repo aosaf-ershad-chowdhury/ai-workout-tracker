@@ -4,7 +4,7 @@ export default function SitemarkIcon() {
   return (
     <Box
       component="img"
-      src="/public/images/logo.png" // <-- CHANGE this to your image path
+      src="/images/logo.png" // <-- CHANGE this to your image path
       alt="Sitemark Logo"
       sx={{
         height: 50,
